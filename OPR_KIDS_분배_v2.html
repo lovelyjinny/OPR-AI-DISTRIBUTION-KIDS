@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NC PICKS KIDS 자동분배</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F3F5; --surface:#FFFFFF; --surface2:#F7F8FA; --border:#E5E8ED; --border2:#D1D5DB;
+  --text:#191919; --text2:#4B5563; --text3:#9CA3AF;
+  --accent:#FEE500; --accent-dark:#F5D800; --accent-text:#191919;
+  --ok:#00B74A; --ok-bg:#E8F9EF; --warn:#F59E0B; --warn-bg:#FEF3C7; --err:#EF4444; --err-bg:#FEF2F2;
+  --blue:#3B82F6; --blue-bg:#EFF6FF; --purple:#8B5CF6; --purple-bg:#F5F3FF; --navy:#1E2B4A;
+  --radius:12px; --radius-sm:8px; --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,.10); --sidebar-w:200px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;min-height:100vh;font-size:14px;-webkit-font-smoothing:antialiased}
+.app{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--navy);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100}
+.main{flex:1;margin-left:var(--sidebar-w);overflow-y:auto;min-height:100vh}
+.logo{padding:24px 18px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+.logo-tag{font-size:10px;font-weight:700;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.logo-title{font-size:15px;font-weight:800;color:#fff;line-height:1.3;letter-spacing:-.02em}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.4);margin-top:4px}
+.nav{padding:12px 10px;flex:1}
+.nav-section{font-size:10px;font-weight:700;color:rgba(255,255,255,.3);padding:12px 8px 4px;letter-spacing:.1em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:13px;color:rgba(255,255,255,.55);cursor:pointer;border-radius:var(--radius-sm);transition:all .15s;margin-bottom:2px;font-weight:500}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item.active{color:var(--accent-text);background:var(--accent);font-weight:700}
+.nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.nav-divider{height:1px;background:rgba(255,255,255,.07);margin:6px 4px}
+.panel{display:none;padding:28px 28px 40px;max-width:1040px}
+.panel.active{display:block;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.page-header{margin-bottom:24px}
+.page-title{font-size:22px;font-weight:800;letter-spacing:-.03em;margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--text3)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);padding:11px 18px;border-radius:var(--radius-sm);cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;transition:all .15s}
+.seg button:hover{border-color:var(--border2)}
+.seg button.on{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:700}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld label{font-size:12px;color:var(--text3);font-weight:600}
+input[type=number],input[type=text],input[type=date],select{background:var(--surface2);border:1.5px solid var(--border);color:var(--text);border-radius:6px;padding:9px 11px;font-size:14px;font-family:inherit;transition:all .15s}
+input:focus,select:focus{outline:none;border-color:var(--navy);background:#fff}
+.upload-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.upload-card{border:2px dashed var(--border2);border-radius:var(--radius);padding:18px 16px;cursor:pointer;transition:all .2s;min-height:108px}
+.upload-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.upload-card.loaded{border-style:solid;border-color:var(--ok);background:var(--ok-bg)!important}
+.uc1{background:#EEF4FF;border-color:#BFCFFF}.uc2{background:#FFF4EC;border-color:#FFCFA0}.uc3{background:#EDFFF5;border-color:#A7F0C4}
+.uc4{background:#FFF8E1;border-color:#FFE082}.uc5{background:#F5F3FF;border-color:#D8CFFF}
+.upload-icon{font-size:22px;margin-bottom:8px}
+.upload-num{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.badge-req{background:var(--navy);color:#fff;font-size:9px;padding:1px 6px;border-radius:20px}
+.badge-opt{background:var(--warn-bg);color:var(--warn);font-size:9px;padding:1px 6px;border-radius:20px}
+.upload-name{font-size:14px;font-weight:700;margin-bottom:5px}
+.upload-status{font-size:11px;color:var(--text3);line-height:1.4}
+.upload-card.loaded .upload-status{color:var(--ok);font-weight:600}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all .18s;font-family:inherit}
+.btn-primary{background:var(--accent);color:var(--accent-text)}
+.btn-primary:hover{background:var(--accent-dark);transform:translateY(-1px);box-shadow:0 4px 12px rgba(254,229,0,.4)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-success{background:var(--ok);color:#fff}.btn-success:hover{background:#009A3D}
+.btn-outline{background:transparent;color:var(--text2);border:1.5px solid var(--border2)}
+.btn-outline:hover{background:var(--surface2)}
+.btn-navy{background:var(--navy);color:#fff}.btn-navy:hover{background:#263560}
+.btn-sm{padding:7px 14px;font-size:12px;border-radius:6px}
+.progress-box{background:var(--navy);border-radius:var(--radius);padding:16px 20px;margin-bottom:12px;display:none}
+.progress-box.show{display:block}
+.log-lines{font-family:'Courier New',monospace;font-size:12px;max-height:220px;overflow-y:auto;line-height:1.75}
+.log-ok{color:#6EE7B7}.log-info{color:rgba(255,255,255,.5)}.log-warn{color:#FCD34D}.log-err{color:#FCA5A5}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 16px;box-shadow:var(--shadow)}
+.stat-label{font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600}
+.stat-val{font-size:26px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+.stat-val.blue{color:var(--blue)}.stat-val.green{color:var(--ok)}.stat-val.amber{color:var(--warn)}.stat-val.purple{color:var(--purple)}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px}
+.table-wrap{overflow-x:auto;border-radius:var(--radius-sm)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{background:var(--surface2)}
+th{color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:left;border-bottom:2px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text2)}
+td:first-child{color:var(--text);font-weight:500}
+tr:hover td{background:var(--surface2)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.bar{height:7px;background:var(--surface2);border-radius:5px;overflow:hidden;min-width:60px}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--navy),var(--blue))}
+.chip{padding:8px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text3);cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;user-select:none;white-space:nowrap}
+.chip:hover{border-color:var(--text3)}
+.chip.on{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.chip.on::before{content:'✓ '}
+.chip .star{color:var(--warn)}
+.badge{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;white-space:nowrap}
+.b-seoyang{background:var(--blue-bg);color:var(--blue)}.b-direct{background:var(--purple-bg);color:var(--purple)}
+.b-general{background:var(--ok-bg);color:var(--ok)}.b-zara{background:var(--warn-bg);color:var(--warn)}
+.b-init{background:var(--warn-bg);color:var(--warn)}.b-pick{background:var(--purple-bg);color:var(--purple)}
+.b-sub{background:var(--blue-bg);color:var(--blue)}.b-po{background:var(--ok-bg);color:var(--ok)}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.setting-row:last-child{border-bottom:none}
+.setting-label{font-size:14px;font-weight:500}
+.setting-desc{font-size:12px;color:var(--text3);margin-top:2px}
+.empty-state{text-align:center;padding:70px 20px}
+.empty-icon{font-size:48px;margin-bottom:14px;opacity:.3}
+.empty-title{font-size:16px;font-weight:700;color:var(--text2);margin-bottom:6px}
+.empty-sub{font-size:13px;color:var(--text3)}
+.error-box{background:var(--err-bg);border:1.5px solid #FECACA;border-radius:var(--radius-sm);padding:12px 16px;color:var(--err);font-size:13px;font-weight:600;margin-bottom:14px;display:none}
+.error-box.show{display:block}
+.hide{display:none!important}
+.spinner{width:16px;height:16px;border:2.5px solid rgba(25,25,25,.2);border-top-color:var(--accent-text);border-radius:50%;animation:spin .7s linear infinite;display:none}
+.spinner.show{display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.mobile-tab{display:none}
+@media(max-width:768px){
+  .sidebar{display:none}.main{margin-left:0;padding-bottom:72px}
+  .panel{padding:18px 16px 32px}.upload-grid{grid-template-columns:1fr 1fr}.stat-grid{grid-template-columns:1fr 1fr}
+  .mobile-tab{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:200}
+  .mobile-tab-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px;font-size:10px;color:var(--text3);cursor:pointer;gap:3px;font-weight:600}
+  .mobile-tab-item.active{color:var(--navy)}.mobile-tab-item .ti{font-size:20px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-tag">NC PICKS · KIDS</div>
+    <div class="logo-title">키즈<br>자동분배 시스템</div>
+    <div class="logo-sub">픽스 키즈 15개 매장</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">분배</div>
+    <div class="nav-item active" id="nav-dist" onclick="showPanel('dist',this)"><span class="nav-icon">⚡</span> 분배 실행</div>
+    <div class="nav-item" id="nav-result" onclick="showPanel('result',this)"><span class="nav-icon">📊</span> 분배 결과</div>
+    <div class="nav-divider"></div>
+    <div class="nav-section">관리</div>
+    <div class="nav-item" id="nav-stores" onclick="showPanel('stores',this)"><span class="nav-icon">🏪</span> 매장 · 진열량</div>
+    <div class="nav-item" id="nav-settings" onclick="showPanel('settings',this)"><span class="nav-icon">⚙️</span> 설정</div>
+  </nav>
+</div>
+<div class="mobile-tab">
+  <div class="mobile-tab-item active" onclick="showPanel('dist',this)"><span class="ti">⚡</span>분배</div>
+  <div class="mobile-tab-item" onclick="showPanel('result',this)"><span class="ti">📊</span>결과</div>
+  <div class="mobile-tab-item" onclick="showPanel('stores',this)"><span class="ti">🏪</span>매장</div>
+  <div class="mobile-tab-item" onclick="showPanel('settings',this)"><span class="ti">⚙️</span>설정</div>
+</div>
+
+<div class="main">
+<!-- 분배 실행 -->
+<div class="panel active" id="panel-dist">
+  <div class="page-header">
+    <div class="page-title">분배 실행</div>
+    <div class="page-sub">분배 유형을 고르고 파일을 올린 뒤 실행하세요 · 파일은 DRM 해제(일반 엑셀)된 상태여야 읽힙니다</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">① 분배 유형</div>
+    <div class="seg" id="distSeg"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">② 분배 설정</div>
+    <div class="row">
+      <div class="fld"><label>분배일</label><input type="date" id="distDate"></div>
+      <div class="fld" id="fld-batch"><label>초도 차수(시즌)</label>
+        <select id="initBatch">
+          <option value="1">봄 (SS·계절1)</option>
+          <option value="2">여름 (SS·계절2)</option>
+          <option value="3">가을 (FW·계절3)</option>
+          <option value="4">겨울 (FW·계절4)</option>
+          <option value="all">전체</option>
+        </select></div>
+      <div class="fld" id="fld-zara"><label>자라키즈</label>
+        <select id="includeZara"><option value="N">제외</option><option value="Y">포함</option></select></div>
+      <div class="fld" id="fld-pmax"><label>최대 필업량</label><input type="number" id="pickupMax" value="2" min="1" max="9" style="width:90px"></div>
+      <div class="fld" id="fld-ratio"><label>초도 출고비율(%)</label><input type="number" id="initRatio" value="60" min="10" max="100" style="width:100px"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div class="card-title" style="margin-bottom:0">③ 출고 대상 매장 <span id="store-count" style="background:var(--blue-bg);color:var(--blue);padding:2px 9px;border-radius:20px;font-size:11px;margin-left:4px">15개</span></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-outline btn-sm" onclick="selectAllStores(true)">전체</button>
+        <button class="btn btn-outline btn-sm" onclick="selectAllStores(false)">해제</button>
+      </div>
+    </div>
+    <div id="store-chips" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">④ 입력 파일 <span id="file-hint" style="color:var(--text3);font-weight:400;text-transform:none;font-size:11px"></span></div>
+    <div class="upload-grid" id="upload-grid"></div>
+  </div>
+
+  <div class="error-box" id="error-box"></div>
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+    <button class="btn btn-primary" id="run-btn" onclick="runDistribution()"><div class="spinner" id="spinner"></div><span id="btn-text">분배 실행</span></button>
+    <div style="font-size:13px;color:var(--text3)" id="ready-hint"></div>
+  </div>
+  <div class="progress-box" id="progress-box"><div class="log-lines" id="log-lines"></div></div>
+</div>
+
+<!-- 분배 결과 -->
+<div class="panel" id="panel-result">
+  <div class="page-header"><div class="page-title">분배 결과</div><div class="page-sub">매장별 분배 현황과 상세 내역을 확인하고 엑셀로 받으세요</div></div>
+  <div class="empty-state" id="no-result"><div class="empty-icon">📭</div><div class="empty-title">아직 분배를 실행하지 않았습니다</div><div class="empty-sub">분배 실행 탭에서 파일을 올리고 실행하세요</div></div>
+  <div id="result-box" class="hide">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">분배 건수</div><div class="stat-val blue" id="r-count">-</div><div class="stat-sub">자재 × 매장</div></div>
+      <div class="stat-card"><div class="stat-label">분배 수량</div><div class="stat-val green" id="r-qty">-</div><div class="stat-sub">개</div></div>
+      <div class="stat-card"><div class="stat-label">미배정</div><div class="stat-val amber" id="r-unmet">-</div><div class="stat-sub">건</div></div>
+      <div class="stat-card"><div class="stat-label">유형</div><div class="stat-val purple" id="r-type" style="font-size:18px">-</div><div class="stat-sub" id="r-date"></div></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-success btn-sm" onclick="downloadExcel()">⬇ 엑셀 다운로드</button>
+      <button class="btn btn-outline btn-sm" onclick="showPanel('dist',null)">↩ 다시 실행</button>
+      <span id="dl-name" style="font-size:12px;color:var(--text3)"></span>
+    </div>
+    <div class="card" id="sup-card" style="display:none">
+      <div class="card-title">공급업체별 요약 (직납 PO)</div>
+      <div class="table-wrap"><table><thead><tr><th>공급업체</th><th>구매처번호</th><th class="num">발주 SKU</th><th class="num">발주 수량</th><th class="num">대상 매장</th></tr></thead><tbody id="sup-table"></tbody></table></div>
+    </div>
+    <div class="card">
+      <div class="card-title">매장별 분배 현황</div>
+      <div class="table-wrap"><table><thead><tr><th>플랜트</th><th>매장</th><th class="num">진열량</th><th class="num">SKU</th><th class="num">분배수량</th><th style="width:160px"></th></tr></thead><tbody id="store-table"></tbody></table></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div class="card-title" style="margin-bottom:0">상세 분배 내역 <span id="detail-cnt" style="font-weight:400;text-transform:none;color:var(--text3)"></span></div>
+        <input type="text" id="search-result" placeholder="상품코드 / 매장 / 브랜드 검색" style="width:220px;font-size:12px;padding:7px 10px" oninput="renderDetail()">
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>구분</th><th>상품코드</th><th>브랜드</th><th>분류</th><th>MC</th><th>상품명</th><th>시즌</th><th>매장</th><th class="num">수량</th><th class="num">매출</th></tr></thead><tbody id="detail-table"></tbody></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- 매장 · 진열량 -->
+<div class="panel" id="panel-stores">
+  <div class="page-header"><div class="page-title">매장 · 진열량 관리</div><div class="page-sub">진열량은 초도 사이즈커브 분배의 매장 가중치로 쓰입니다. 저장하면 다음 분배부터 자동 적용됩니다.</div></div>
+  <div class="card">
+    <div class="card-title">매장별 진열량 · 등급</div>
+    <div class="table-wrap"><table><thead><tr><th>플랜트</th><th>매장</th><th>진열량</th><th>등급(1~15)</th><th>가중치</th><th>구분</th></tr></thead><tbody id="store-mgmt-table"></tbody></table></div>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-navy btn-sm" onclick="saveStoreMeta()">💾 저장</button>
+      <button class="btn btn-outline btn-sm" onclick="renderStoreMgmt(true)">기본값 복원</button>
+    </div>
+  </div>
+</div>
+
+<!-- 설정 -->
+<div class="panel" id="panel-settings">
+  <div class="page-header"><div class="page-title">설정 · 도움말</div><div class="page-sub">분배 로직 기준값과 사용 방법</div></div>
+  <div class="card">
+    <div class="card-title">분배 기준 (고급)</div>
+    <div class="setting-row"><div><div class="setting-label">초도 진열량 보조 비중(%)</div><div class="setting-desc">초도는 매장 매출 위주로 출고. 매출 이력 없는 매장에 진열량 기준으로 주는 보조 비중 (기본 25). 0이면 순수 매출 위주</div></div><input type="number" id="cfg-dispfb" value="25" min="0" max="100" style="width:90px"></div>
+    <div class="setting-row"><div><div class="setting-label">최소 가용수량</div><div class="setting-desc">이 수량 미만 자재는 분배 제외 (기본 1)</div></div><input type="number" id="cfg-minavail" value="1" min="1" max="50" style="width:90px"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">분배 유형 안내</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.9">
+      <b>매입초도</b> — 서양물산 매입PO(신상)를 <b>매장 매출 위주</b>로 분배(기본 60% 출고, 나머지는 필업용). SS는 봄·여름, FW는 가을·겨울 차수로 나눠 출고. 공통(9코드)은 각 차수에 <b>절반씩</b> 분할(예: 봄 30%+여름 30%). (가용재고 올리면 실입고 대조)<br>
+      <b>매입필업</b> — 매출 발생 자재 보충. 동일SKU → 사이즈대체 → 유사스타일(브랜드+MC) 순. 필업량 = min(판매−현재고, 최대)<br>
+      <b>직납초도</b> — 가용재고의 직납 브랜드 신상을 사이즈커브로 PO 생성<br>
+      <b>직납필업</b> — 직납 브랜드 발주. 발주량 = min(판매−(현재고+미확정PO), 최대)<br>
+      <span style="color:var(--text3)">매출 반영 기간: 월요일 분배 = 전주 목~일 / 목요일 분배 = 그주 월~수 (필업만)</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">파일 안내</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.9">
+      회사 SAP 파일은 <b>SCDSA 암호화</b> 상태라 브라우저로 못 읽습니다. <b>DRM 해제(일반 엑셀로 저장)</b> 후 올려주세요.<br>
+      매출·일재고·가용재고는 컬럼 위치가 검증되어 있어 그대로 인식합니다.
+    </div>
+  </div>
+</div>
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+/* ══════════════ 설정/상수 (config.py 이식) ══════════════ */
+const STORES={'7204':'중계점','7209':'분당점','7215':'천호2점','8201':'일산점','8205':'평촌2점','8206':'강남점','8220':'창원점','8222':'부천점','8224':'송파점','8229':'부산대점','8231':'엑스코점','8237':'수원터미널점','8242':'신구로점','8243':'NC대전 유성점','8501':'쇼핑점'};
+const MODEL_STORE='7209';
+const NEW_STORES=new Set(['8201','8229','8243']);
+const DEFAULT_DISP={'7204':2340,'7209':8420,'7215':3140,'8201':1890,'8205':3010,'8206':1430,'8220':2060,'8222':3340,'8224':2990,'8229':2350,'8231':1680,'8237':2110,'8242':1750,'8243':1800,'8501':2530};
+const DIRECT_BRANDS=['올리반','디즈니','해피버스','쁘띠뮤','삠뽀요','팬콧'];
+const GENERAL_BRANDS=['헤지스키즈','포인터웍스'];
+const ZARA_BRANDS=['자라키즈'];
+const GROUP_LABEL={seoyang:'서양물산',direct:'직납',general:'일반',zara:'자라키즈'};
+const SUPPLIER={'해피버스':{name:'주식회사 해피원',no:'125313'},'디즈니':{name:'티엘',no:'112595'},'삠뽀요':{name:'주식회사 리틀뎁',no:'123252'},'쁘띠뮤':{name:'주식회사 글로리',no:''},'팬콧':{name:'에스앤엘인터내셔널',no:''},'올리반':{name:'주식회사 제이앤에이',no:''}};
+const COL_SALES={store:1,mc:3,mch2:5,brand:8,style:9,name:10,season_yr:11,date:17,qty:23}, SALES_HDR=5;
+const COL_INV={store:1,brand:6,mc:7,season_yr:9,mch2:12,style:14,name:15,size:16,color:17,qty:19}, INV_HDR=5;
+const COL_AVAIL={mat:1,mc:2,name:5,qty:12,brand:15,ret:21,season:24}, AVAIL_HDR=1;
+const DIST_TYPES=['매입초도','매입필업','직납초도','직납필업'];
+
+function brandGroup(name){const n=String(name||'').replace(/\s/g,'');if(!n)return'seoyang';if(ZARA_BRANDS.some(b=>n.includes(b)))return'zara';if(DIRECT_BRANDS.some(b=>n.includes(b)))return'direct';if(GENERAL_BRANDS.some(b=>n.includes(b)))return'general';return'seoyang';}
+function supplierOf(b){const n=String(b||'').replace(/\s/g,'');for(const k in SUPPLIER){if(n.includes(k))return SUPPLIER[k];}return null;}
+function getSeason(c){let k=String(c==null?'':c).replace(/,/g,'').trim();if(/^\d+$/.test(k)){const n=parseInt(k);k=n<=9?String(n):String(n).slice(-1);}if(k==='1'||k==='2')return'SS';if(k==='3'||k==='4'||k==='9')return'FW';return'ALL';}
+function seasonCode(c){let k=String(c==null?'':c).replace(/,/g,'').trim();if(/^\d+$/.test(k)){const n=parseInt(k);return n<=9?String(n):String(n).slice(-1);}return k;}
+function styleKey(c){c=String(c||'').trim();return c.length<=7?c:c.slice(0,-5);}
+function colorKey(c){c=String(c||'').trim();return c.length>1?c.slice(0,-1):c;}
+function num(v){if(v==null)return 0;const n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?0:n;}
+function extractPlant(s){s=String(s==null?'':s);let m=s.match(/\/(\d{4})$/)||s.match(/(\d{4})/);return m?m[1]:null;}
+function ymd(v){if(v==null)return'';if(v instanceof Date)return v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0')+'-'+String(v.getDate()).padStart(2,'0');const m=String(v).match(/(\d{4})[-.\/]\s*(\d{1,2})[-.\/]\s*(\d{1,2})/);return m?m[1]+'-'+String(+m[2]).padStart(2,'0')+'-'+String(+m[3]).padStart(2,'0'):'';}
+
+/* ══════════════ 저장소 (localStorage) ══════════════ */
+const LS_META='kids_v2_store_meta', LS_CFG='kids_v2_cfg';
+function defaultMeta(){const m={};let i=1;Object.keys(STORES).forEach(p=>{m[p]={name:STORES[p],disp:DEFAULT_DISP[p]||0,rank:i++,mult:p===MODEL_STORE?1.3:1.0};});return m;}
+function getStoreMeta(){try{const s=JSON.parse(localStorage.getItem(LS_META));if(s&&Object.keys(s).length)return s;}catch(e){}return defaultMeta();}
+function setStoreMeta(m){localStorage.setItem(LS_META,JSON.stringify(m));}
+
+/* ══════════════ XLSX 읽기 ══════════════ */
+function readXLSX(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>{try{res(XLSX.read(e.target.result,{type:'array',cellDates:true}));}catch(err){rej(err);}};r.onerror=rej;r.readAsArrayBuffer(file);});}
+// 시트→2D배열. SAP BI 내보내기는 A열이 비어 범위가 B1부터 시작 → 강제로 A1(col0,row0)부터
+// 읽어 컬럼 인덱스를 파이썬(openpyxl/Excel COM)과 동일하게 맞춤.
+function sheetRows(ws){let range=ws['!ref'];if(range){const r=XLSX.utils.decode_range(range);r.s.c=0;r.s.r=0;range=XLSX.utils.encode_range(r);}return XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false,range});}
+function pickSheet(wb,hint){let name=null;if(hint)name=wb.SheetNames.find(n=>n.includes(hint));if(!name){let best=null,br=-1;wb.SheetNames.forEach(n=>{if(n.toLowerCase().includes('hidden'))return;const ws=wb.Sheets[n];if(!ws['!ref'])return;const rg=XLSX.utils.decode_range(ws['!ref']);const rows=rg.e.r-rg.s.r;if(rows>br){br=rows;best=n;}});name=best||wb.SheetNames[0];}return sheetRows(wb.Sheets[name]);}
+
+/* ══════════════ 파서 (parsers.py 이식) ══════════════ */
+function parseSales(wb){const rows=pickSheet(wb,'매출상세분석');const C=COL_SALES;const out=[];let dmin='',dmax='';
+  for(let i=SALES_HDR;i<rows.length;i++){const r=rows[i];if(!r||r.length<=C.qty)continue;const style=String(r[C.style]||'').trim();if(!style)continue;const plant=extractPlant(r[C.store]);if(!plant||!STORES[plant])continue;const qty=num(r[C.qty]);if(qty===0)continue;const date=ymd(r[C.date]);out.push({date,plant,style,brand:String(r[C.brand]||'').trim(),mc:String(r[C.mc]||'').trim(),mch2:String(r[C.mch2]||'').trim(),qty});if(date){if(!dmin||date<dmin)dmin=date;if(!dmax||date>dmax)dmax=date;}}
+  return{rows:out,dateMin:dmin,dateMax:dmax};}
+function parseInventory(wb){const rows=pickSheet(wb,'일재고분석');const C=COL_INV;const inv={};
+  for(let i=INV_HDR;i<rows.length;i++){const r=rows[i];if(!r||r.length<=C.qty)continue;const style=String(r[C.style]||'').trim();if(!style)continue;const qty=num(r[C.qty]);const sea=r[C.season_yr];if(!inv[style]){inv[style]={name:String(r[C.name]||'').trim(),brand:String(r[C.brand]||'').trim(),mc:String(r[C.mc]||'').trim(),mch2:String(r[C.mch2]||'').trim(),season:getSeason(sea),season_code:seasonCode(sea),size:String(r[C.size]||'').trim(),color:String(r[C.color]||'').trim(),style_key:styleKey(style),total_qty:0,store_qty:{}};}inv[style].total_qty+=qty;const plant=extractPlant(r[C.store]);if(plant)inv[style].store_qty[plant]=(inv[style].store_qty[plant]||0)+qty;}
+  return inv;}
+function parseAvailable(wb){const rows=pickSheet(wb,'Sheet1');const C=COL_AVAIL;const av={};
+  for(let i=AVAIL_HDR;i<rows.length;i++){const r=rows[i];if(!r||r.length<=C.season)continue;const mat=String(r[C.mat]||'').trim();if(!mat)continue;const qty=num(r[C.qty]);if(qty<=0)continue;const mc=String(r[C.mc]||'').trim();const ret=r[C.ret];const hasRet=ret!=null&&String(ret).trim()!=='';if(!av[mat]){const brand=String(r[C.brand]||'').trim();av[mat]={name:String(r[C.name]||'').trim(),brand,mc,mch2:mc.length>=2?mc.slice(0,2):'',season:getSeason(r[C.season]),season_code:seasonCode(r[C.season]),is_new:true,total_qty:0,style_key:styleKey(mat),group:brandGroup(brand)};}if(hasRet)av[mat].is_new=false;av[mat].total_qty+=qty;}
+  return av;}
+function parsePurchasePO(wb){const codegen={},poq={};
+  wb.SheetNames.forEach(sn=>{const m=sn.match(/\((.+?)\)/);const brand=m?m[1]:'';
+    if(sn.includes('코드생성')){const rows=sheetRows(wb.Sheets[sn]);for(let i=1;i<rows.length;i++){const r=rows[i];if(!r||!r[0])continue;const code=String(r[0]).trim();if(code==='상품코드'||code.length<8||!/^[A-Za-z0-9]/.test(code))continue;const mc=r.length>3?String(r[3]||'').trim():'';codegen[code]={name:r.length>1?String(r[1]||'').trim():'',mc,brand,season:r.length>9?getSeason(r[9]):'SS',season_code:r.length>9?seasonCode(r[9]):''};}}
+    else if(sn.includes('매입PO')){const rows=sheetRows(wb.Sheets[sn]);for(let i=0;i<rows.length;i++){const r=rows[i];if(!r||!r[0])continue;const code=String(r[0]).trim();if(code==='상품코드'||code.length<8||!/^[A-Za-z0-9]/.test(code))continue;const qty=r.length>1?num(r[1]):0;if(qty<=0)continue;poq[code]=(poq[code]||0)+qty;}}
+  });
+  const av={};for(const code in poq){const cg=codegen[code]||{};const brand=cg.brand||'';const mc=cg.mc||'';av[code]={name:cg.name||'',brand,mc,mch2:mc?mc.slice(0,2):'1K',season:cg.season||'SS',season_code:cg.season_code||'',is_new:true,total_qty:poq[code],style_key:styleKey(code),group:brandGroup(brand)};}
+  return av;}
+function parsePO(wb){const rows=pickSheet(wb,'미확정');if(!rows||rows.length<2)return{};const hdr=rows[0];const cf=(...keys)=>{for(let i=0;i<hdr.length;i++){const s=String(hdr[i]||'');if(keys.some(k=>s.includes(k)))return i;}return-1;};let iSt=cf('점포','플랜트','지점'),iSty=cf('상품코드','자재','품번'),iQ=cf('PO수량','수량');if(iSt<0)iSt=0;if(iSty<0)iSty=5;if(iQ<0)iQ=8;const po={};for(let i=1;i<rows.length;i++){const r=rows[i];if(!r||r.length<=Math.max(iSt,iSty,iQ))continue;const plant=extractPlant(r[iSt])||String(r[iSt]||'').trim();if(!plant||!STORES[plant])continue;const style=String(r[iSty]||'').trim();if(!style)continue;const qty=num(r[iQ]);if(qty<=0)continue;if(!po[plant])po[plant]={};po[plant][style]=(po[plant][style]||0)+qty;}return po;}
+
+/* ══════════════ 매출기간/우선순위 ══════════════ */
+function salesPeriod(distDate){const d=new Date(distDate+'T00:00:00');const dow=(d.getDay()+6)%7;let bs,be,label;if(dow===0){bs=4;be=1;label='월요일 분배 → 전주 목~일';}else if(dow===3){bs=3;be=1;label='목요일 분배 → 그주 월~수';}else{bs=3;be=1;label='월/목 아님 → 직전 3일';}const fmt=x=>{const t=new Date(d);t.setDate(t.getDate()-x);return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');};return[fmt(bs),fmt(be),label];}
+function salesInPeriod(records,start,end){const out={};records.forEach(r=>{if(!r.date||r.date<start||r.date>end)return;if(!out[r.plant])out[r.plant]={};out[r.plant][r.style]=(out[r.plant][r.style]||0)+r.qty;});return out;}
+function brandMcStore(records){const out={};records.forEach(r=>{const k=r.brand+'|'+r.mc+'|'+r.plant;out[k]=(out[k]||0)+r.qty;});return out;}
+
+/* ══════════════ 분배 (distribute.py 이식) ══════════════ */
+function lrAlloc(total,weights){total=Math.round(total);const ps=Object.keys(weights).filter(p=>weights[p]>0);const sw=ps.reduce((a,p)=>a+weights[p],0);if(total<=0||sw<=0)return{};const raw={},base={};ps.forEach(p=>{raw[p]=total*weights[p]/sw;base[p]=Math.floor(raw[p]);});let rem=total-ps.reduce((a,p)=>a+base[p],0);const order=ps.slice().sort((a,b)=>(raw[b]-base[b])-(raw[a]-base[a]));for(let i=0;i<rem;i++)base[order[i%order.length]]++;const o={};ps.forEach(p=>{if(base[p]>0)o[p]=base[p];});return o;}
+
+function runInitCurve(avail,bms,meta,P,groups,initBatch,includeZara,seasons,plants){
+  const RATIO=P.init_ratio, FB=(P.disp_fallback!=null?P.disp_fallback:0.25);
+  plants=plants||Object.keys(STORES);
+  // 차수(시즌) 필터: 공통(9)은 모든 회차 포함. 봄1/여름2/가을3/겨울4
+  const targets=[];
+  for(const mat in avail){const info=avail[mat];const g=info.group;
+    if(!groups.has(g))continue;
+    if(g==='zara'&&!includeZara)continue;
+    if(!info.is_new)continue;
+    if(initBatch!=='all'&&info.season_code!==initBatch&&info.season_code!=='9')continue;
+    if(info.mch2&&info.mch2!=='1K')continue;
+    if(info.total_qty<=0)continue;
+    targets.push([mat,info]);}
+  // 매출 위주 가중치: 브랜드+MC 매출 → (없으면) MC 매출 → (없으면) 진열량. 매출있을 땐 진열량 보조(FB)
+  const totalDisp=plants.reduce((a,p)=>a+((meta[p]&&meta[p].disp)||0),0)||1;
+  const bmsMc={}; for(const k in bms){const i=k.indexOf('|');const rest=k.slice(i+1);const j=rest.indexOf('|');const mc=rest.slice(0,j),pl=rest.slice(j+1);bmsMc[mc+'|'+pl]=(bmsMc[mc+'|'+pl]||0)+bms[k];}
+  const colors={};targets.forEach(([mat,info])=>{const ck=colorKey(mat);(colors[ck]=colors[ck]||[]).push([mat,info]);});
+  const results=[],unmet=[];
+  for(const ck in colors){const skus=colors[ck];const i0=skus[0][1];const brand=i0.brand,mc=i0.mc;
+    let bsc={},tb=0; plants.forEach(p=>{bsc[p]=bms[brand+'|'+mc+'|'+p]||0;tb+=bsc[p];});
+    if(tb===0){tb=0;plants.forEach(p=>{bsc[p]=bmsMc[mc+'|'+p]||0;tb+=bsc[p];});}
+    let w={};
+    if(tb>0){plants.forEach(p=>{const ss=bsc[p]/tb;const ds=((meta[p]&&meta[p].disp)||0)/totalDisp;w[p]=ss+FB*ds;});}
+    else{plants.forEach(p=>{w[p]=Math.max((meta[p]&&meta[p].disp)||0,1)*((meta[p]&&meta[p].mult)||1);});}
+    let shipped=0;
+    skus.forEach(([mat,info])=>{
+      // 공통(9): 시즌 2회차에 절반씩 (봄 30% + 여름 30%). 특정 차수 선택 시만 분할, 전체는 그대로.
+      const ratio=(info.season_code==='9'&&initBatch!=='all')?RATIO/2:RATIO;
+      const ship=Math.round(info.total_qty*ratio);if(ship<=0)return;const al=lrAlloc(ship,w);for(const p in al){results.push({dist_type:(info.season_code==='9'?'초도(공통)':'초도'),mat,plant:p,qty:al[p],store_name:STORES[p],name:info.name,brand,mc,season:info.season,group:info.group,sold_qty:0});shipped+=al[p];}});
+    if(shipped===0)unmet.push({mat:skus[0][0],name:i0.name,store_name:skus.length+'개 SKU 미출고',sold_qty:0,avail_qty:skus.reduce((a,s)=>a+s[1].total_qty,0),season:i0.season,reason:'수량 부족 — 출고비율 적용 후 0'});}
+  return{results,unmet,sizesubs:[]};}
+
+function runBuyPickup(sp,inv,avail,meta,P,includeZara,seasons,plants){
+  const PMAX=P.pickup_max,MIN=P.min_avail;const pset=new Set(plants||Object.keys(STORES));const remaining={},sizeIdx={},simIdx={};
+  for(const mat in avail){const info=avail[mat];if(info.is_new)continue;if(info.group==='direct')continue;remaining[mat]=info.total_qty;(sizeIdx[info.style_key]=sizeIdx[info.style_key]||[]).push(mat);const sk=info.brand+'|'+info.mc;(simIdx[sk]=simIdx[sk]||[]).push(mat);}
+  const results=[],sizesubs=[],unmet=[];
+  for(const plant in sp){if(!STORES[plant]||!pset.has(plant))continue;const sname=STORES[plant];const ps=sp[plant];const ent=Object.keys(ps).map(s=>[s,ps[s]]).sort((a,b)=>b[1]-a[1]);
+    for(const [style,sold] of ent){if(sold<=0)continue;const info=avail[style]||inv[style];if(!info){unmet.push({mat:style,name:'(미상)',plant,store_name:sname,sold_qty:sold,avail_qty:0,reason:'동일자재 본사재고 없음'});continue;}const grp=brandGroup(info.brand||info.name);if(grp==='direct')continue;if(grp==='zara'&&!includeZara)continue;if(info.season&&!seasons.includes(info.season))continue;const cur=((inv[style]&&inv[style].store_qty)||{})[plant]||0;let need=Math.min(Math.max(0,Math.round(sold)-cur),PMAX);if(need<=0)continue;
+      let have=remaining[style]||0;if(have>=MIN){const give=Math.min(need,have);results.push({dist_type:'픽업',mat:style,plant,qty:give,store_name:sname,name:info.name,brand:info.brand,mc:info.mc,season:info.season||'',group:grp,sold_qty:sold});remaining[style]=have-give;need-=give;}
+      const sk=info.style_key||styleKey(style);if(need>0)for(const cm of (sizeIdx[sk]||[])){if(need<=0)break;if(cm===style||(remaining[cm]||0)<MIN)continue;const ci=avail[cm];const give=Math.min(need,remaining[cm]);results.push({dist_type:'사이즈대체',mat:cm,plant,qty:give,store_name:sname,name:ci.name,brand:ci.brand,mc:ci.mc,season:ci.season,group:ci.group,orig_mat:style,sold_qty:sold});sizesubs.push({orig_mat:style,orig_name:info.name,sub_mat:cm,sub_name:ci.name,store_name:sname,qty:give,reason:'동일자재 부족 → 사이즈 대체'});remaining[cm]-=give;need-=give;}
+      if(need>0){const key=(info.brand||'')+'|'+(info.mc||'');const cands=(simIdx[key]||[]).filter(m=>m!==style&&(remaining[m]||0)>=MIN).sort((a,b)=>(ps[b]||0)-(ps[a]||0));for(const cm of cands){if(need<=0)break;const ci=avail[cm];const give=Math.min(need,remaining[cm]);results.push({dist_type:'유사스타일',mat:cm,plant,qty:give,store_name:sname,name:ci.name,brand:ci.brand,mc:ci.mc,season:ci.season,group:ci.group,orig_mat:style,sold_qty:sold});sizesubs.push({orig_mat:style,orig_name:info.name,sub_mat:cm,sub_name:ci.name,store_name:sname,qty:give,reason:'동일·사이즈 부족 → 유사스타일'});remaining[cm]-=give;need-=give;}}
+      if(need>0)unmet.push({mat:style,name:info.name,plant,store_name:sname,sold_qty:sold,avail_qty:remaining[style]||0,shortage:need,season:info.season||'',reason:'재고 부족 (동일·사이즈·유사 모두 미충족)'});}}
+  return{results,unmet,sizesubs};}
+
+function runDnPickup(sp,inv,po,meta,P,seasons,plants){
+  const PMAX=P.pickup_max;const pset=new Set(plants||Object.keys(STORES));const orders=[];
+  for(const plant in sp){if(!STORES[plant]||!pset.has(plant))continue;const sname=STORES[plant];const ps=sp[plant];const ent=Object.keys(ps).map(s=>[s,ps[s]]).sort((a,b)=>b[1]-a[1]);
+    for(const [style,sold] of ent){if(sold<=0)continue;const info=inv[style];if(!info)continue;if(brandGroup(info.brand||info.name)!=='direct')continue;if(info.season&&!seasons.includes(info.season))continue;const cur=(info.store_qty||{})[plant]||0;const pq=((po[plant]||{})[style])||0;const order=Math.min(Math.max(0,Math.round(sold)-cur-pq),PMAX);if(order<=0)continue;orders.push({dist_type:'PO발주',mat:style,plant,qty:order,store_name:sname,name:info.name,brand:info.brand,mc:info.mc,season:info.season||'',group:'direct',sold_qty:sold,cur_stock:cur,po_qty:pq});}}
+  return{results:orders,unmet:[],sizesubs:[]};}
+
+function distribute(dt,parsed,bms,meta,P,opt){
+  const avail=parsed.avail||{},inv=parsed.inv||{};const seasons=opt.seasons;const plants=(opt.plants&&opt.plants.length)?opt.plants:Object.keys(STORES);
+  if(dt==='매입초도')return runInitCurve(avail,bms,meta,P,new Set(['seoyang','general','zara']),opt.initBatch,opt.includeZara,seasons,plants);
+  if(dt==='직납초도')return runInitCurve(avail,bms,meta,P,new Set(['direct']),opt.initBatch,false,seasons,plants);
+  if(dt==='매입필업')return runBuyPickup(opt.sp||{},inv,avail,meta,P,opt.includeZara,seasons,plants);
+  if(dt==='직납필업')return runDnPickup(opt.sp||{},inv,opt.po||{},meta,P,seasons,plants);
+  throw new Error('알 수 없는 분배 유형: '+dt);}
+
+/* ══════════════ UI ══════════════ */
+let DIST='매입필업', FILES={}, RESULT=null, RESMETA=null, SELECTED=new Set(Object.keys(STORES));
+const UPLOADS=[
+  {key:'avail',icon:'🏭',name:'가용재고',cls:'uc3',hint:'물류 출고가능 수량',sheet:'Sheet1'},
+  {key:'sales',icon:'📈',name:'매출상세분석',cls:'uc2',hint:'매장별 판매수량',sheet:'매출상세분석'},
+  {key:'inv',icon:'📦',name:'일재고분석',cls:'uc1',hint:'매장별 현재고',sheet:'일재고분석'},
+  {key:'purchase',icon:'🧾',name:'서양 매입PO',cls:'uc4',hint:'매입초도 입력(신상)',sheet:''},
+  {key:'po',icon:'📋',name:'미확정PO',cls:'uc5',hint:'직납필업 작업판',sheet:'미확정'},
+];
+// 유형별 필요 파일
+const NEED={'매입초도':{req:['purchase'],opt:['avail','sales']},'매입필업':{req:['sales','inv','avail'],opt:[]},'직납초도':{req:['avail'],opt:['sales']},'직납필업':{req:['sales','inv'],opt:['po']}};
+
+function showPanel(id,el){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.getElementById('panel-'+id).classList.add('active');document.querySelectorAll('.nav-item,.mobile-tab-item').forEach(n=>n.classList.remove('active'));if(el)el.classList.add('active');const nav=document.getElementById('nav-'+id);if(nav)nav.classList.add('active');if(id==='stores')renderStoreMgmt();}
+
+function buildDistSeg(){const seg=document.getElementById('distSeg');seg.innerHTML='';DIST_TYPES.forEach(t=>{const b=document.createElement('button');b.textContent=t;if(t===DIST)b.classList.add('on');b.onclick=()=>{DIST=t;[...seg.children].forEach(x=>x.classList.remove('on'));b.classList.add('on');syncFields();renderUploads();};seg.appendChild(b);});}
+function syncFields(){const isInit=DIST.includes('초도'),isBuy=DIST.includes('매입');document.getElementById('fld-batch').classList.toggle('hide',!isInit);document.getElementById('fld-ratio').classList.toggle('hide',!isInit);document.getElementById('fld-zara').classList.toggle('hide',!isBuy);document.getElementById('fld-pmax').classList.toggle('hide',isInit);}
+function renderUploads(){const need=NEED[DIST];const grid=document.getElementById('upload-grid');grid.innerHTML='';const show=[...need.req,...need.opt];document.getElementById('file-hint').textContent='('+DIST+' 필요: '+need.req.join(', ')+(need.opt.length?' / 선택: '+need.opt.join(', '):'')+')';
+  UPLOADS.filter(u=>show.includes(u.key)).forEach(u=>{const isReq=need.req.includes(u.key);const loaded=!!FILES[u.key];const div=document.createElement('div');div.className='upload-card '+u.cls+(loaded?' loaded':'');div.onclick=()=>document.getElementById('fi-'+u.key).click();div.innerHTML=`<input type="file" id="fi-${u.key}" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this,'${u.key}')"><div class="upload-icon">${u.icon}</div><div class="upload-num">${u.name} <span class="${isReq?'badge-req':'badge-opt'}">${isReq?'필수':'선택'}</span></div><div class="upload-name" id="fn-${u.key}">${loaded?FILES[u.key].name:'파일 선택'}</div><div class="upload-status">${loaded?'✓ 업로드됨':u.hint}</div>`;grid.appendChild(div);});updateReady();}
+function handleFile(input,key){if(input.files&&input.files[0]){FILES[key]=input.files[0];}renderUploads();}
+function renderStoreChips(){const c=document.getElementById('store-chips');c.innerHTML='';Object.keys(STORES).forEach(p=>{const on=SELECTED.has(p);const d=document.createElement('div');d.className='chip'+(on?' on':'');d.innerHTML=STORES[p]+(p===MODEL_STORE?' <span class="star">★</span>':'')+(NEW_STORES.has(p)?' <span style="color:var(--text3);font-size:10px">신규</span>':'');d.onclick=()=>{if(SELECTED.has(p))SELECTED.delete(p);else SELECTED.add(p);renderStoreChips();updateReady();};c.appendChild(d);});document.getElementById('store-count').textContent=SELECTED.size+'개';}
+function selectAllStores(on){SELECTED=on?new Set(Object.keys(STORES)):new Set();renderStoreChips();updateReady();}
+function updateReady(){const need=NEED[DIST];const missing=need.req.filter(k=>!FILES[k]);const btn=document.getElementById('run-btn');const noStore=SELECTED.size===0;btn.disabled=missing.length>0||noStore;document.getElementById('ready-hint').textContent=noStore?'출고 대상 매장을 1개 이상 선택하세요':(missing.length?('필수 파일 누락: '+missing.map(k=>UPLOADS.find(u=>u.key===k).name).join(', ')):'준비 완료 — 분배 실행하세요');}
+
+function log(msg,cls){const box=document.getElementById('progress-box');box.classList.add('show');const el=document.getElementById('log-lines');const d=document.createElement('div');d.className='log-'+(cls||'info');d.textContent=msg;el.appendChild(d);el.scrollTop=el.scrollHeight;}
+function showError(m){const e=document.getElementById('error-box');e.textContent='⚠ '+m;e.classList.add('show');}
+function hideError(){document.getElementById('error-box').classList.remove('show');}
+
+async function runDistribution(){
+  hideError();document.getElementById('log-lines').innerHTML='';
+  const btn=document.getElementById('run-btn');btn.disabled=true;document.getElementById('spinner').classList.add('show');document.getElementById('btn-text').textContent='처리 중...';
+  await new Promise(r=>setTimeout(r,30));
+  try{
+    const dt=DIST;const distDate=document.getElementById('distDate').value;
+    const P={pickup_max:parseInt(document.getElementById('pickupMax').value)||2,min_avail:parseInt(document.getElementById('cfg-minavail').value)||1,init_ratio:(parseInt(document.getElementById('initRatio').value)||60)/100,disp_fallback:(parseInt(document.getElementById('cfg-dispfb').value)||25)/100};
+    const initBatch=document.getElementById('initBatch').value;const includeZara=document.getElementById('includeZara').value==='Y';
+    const meta=getStoreMeta();const isInit=dt.includes('초도'),isDn=dt.includes('직납');
+    const plants=Object.keys(STORES).filter(p=>SELECTED.has(p));
+    log('═══ '+dt+' / 분배일 '+distDate+' ═══','ok');
+    log('출고 대상 매장: '+plants.length+'개 ('+plants.map(p=>STORES[p]).join(', ')+')');
+    const parsed={avail:{},inv:{}};let records=[];
+    if(FILES.avail){log('가용재고 파싱...');parsed.avail=parseAvailable(await readXLSX(FILES.avail));log('  → '+Object.keys(parsed.avail).length+'종');}
+    if(FILES.inv){log('일재고 파싱...');parsed.inv=parseInventory(await readXLSX(FILES.inv));log('  → '+Object.keys(parsed.inv).length+'종');}
+    if(FILES.sales){log('매출 파싱...');const sr=parseSales(await readXLSX(FILES.sales));records=sr.rows;log('  → '+records.length+'행 ('+sr.dateMin+'~'+sr.dateMax+')');}
+    if(dt==='매입초도'&&FILES.purchase){log('서양 매입PO 파싱...');const poav=parsePurchasePO(await readXLSX(FILES.purchase));const tot=Object.values(poav).reduce((a,v)=>a+v.total_qty,0);log('  → 매입PO '+Object.keys(poav).length+'종 / '+tot.toLocaleString()+'개');if(Object.keys(parsed.avail).length){const matched=Object.keys(poav).filter(c=>parsed.avail[c]).length;log('  → 가용재고 대조 '+matched+'/'+Object.keys(poav).length+'종 실입고 ('+Math.floor(matched*100/Math.max(1,Object.keys(poav).length))+'%)','warn');}parsed.avail=poav;}
+    const bms=brandMcStore(records);
+    let sp=null,po=null;
+    if(!isInit){const[start,end,label]=salesPeriod(distDate);log('매출 반영: '+start+'~'+end+' ('+label+')');sp=salesInPeriod(records,start,end);const cnt=Object.values(sp).reduce((a,o)=>a+Object.keys(o).length,0);log('  → 기간내 '+cnt+'건');if(isDn&&FILES.po){log('미확정PO 파싱...');po=parsePO(await readXLSX(FILES.po));const n=Object.values(po).reduce((a,o)=>a+Object.keys(o).length,0);log('  → '+n+'건 / '+Object.keys(po).length+'매장');}}
+    const seasons=isInit?['SS']:['SS','FW'];
+    const result=distribute(dt,parsed,bms,meta,P,{initBatch,includeZara,seasons,sp,po,plants});
+    const tot=result.results.reduce((a,r)=>a+r.qty,0);
+    log('─────────────────────────');log('분배 결과: '+result.results.length+'건 / '+tot.toLocaleString()+'개 / 미배정 '+result.unmet.length+'건','ok');
+    RESULT={dt,distDate,result};RESMETA=meta;
+    renderResult();showPanel('result',null);document.getElementById('nav-result').classList.add('active');document.getElementById('nav-dist').classList.remove('active');
+    log('완료 — 결과 탭으로 이동','ok');
+  }catch(e){console.error(e);showError('오류: '+e.message);log('오류: '+e.message,'err');}
+  finally{btn.disabled=false;document.getElementById('spinner').classList.remove('show');document.getElementById('btn-text').textContent='분배 실행';updateReady();}
+}
+
+function renderResult(){
+  if(!RESULT)return;const{dt,distDate,result}=RESULT;const res=result.results;const tot=res.reduce((a,r)=>a+r.qty,0);
+  document.getElementById('no-result').classList.add('hide');document.getElementById('result-box').classList.remove('hide');
+  document.getElementById('r-count').textContent=res.length.toLocaleString();
+  document.getElementById('r-qty').textContent=tot.toLocaleString();
+  document.getElementById('r-unmet').textContent=result.unmet.length.toLocaleString();
+  document.getElementById('r-type').textContent=dt;document.getElementById('r-date').textContent=distDate;
+  // 매장별
+  const byp={};Object.keys(STORES).forEach(p=>byp[p]={qty:0,sku:new Set()});res.forEach(r=>{byp[r.plant].qty+=r.qty;byp[r.plant].sku.add(r.mat);});
+  const maxq=Math.max(1,...Object.keys(STORES).map(p=>byp[p].qty));
+  let h='';Object.keys(STORES).forEach(p=>{const d=byp[p];const disp=(RESMETA[p]&&RESMETA[p].disp)||0;h+=`<tr><td>${p}</td><td>${STORES[p]}</td><td class="num">${disp.toLocaleString()}</td><td class="num">${d.sku.size.toLocaleString()}</td><td class="num">${d.qty.toLocaleString()}</td><td><div class="bar"><i style="width:${(d.qty/maxq*100).toFixed(1)}%"></i></div></td></tr>`;});
+  document.getElementById('store-table').innerHTML=h;
+  // 공급업체 (직납)
+  const supCard=document.getElementById('sup-card');
+  if(dt.includes('직납')){supCard.style.display='';const bs={};res.forEach(r=>{const s=supplierOf(r.brand);const nm=s?s.name:(r.brand||'(미상)');const no=s?s.no:'';const k=nm+'|'+no;(bs[k]=bs[k]||{nm,no,sku:new Set(),qty:0,pl:new Set()});bs[k].sku.add(r.mat);bs[k].qty+=r.qty;bs[k].pl.add(r.plant);});let sh='';Object.values(bs).sort((a,b)=>b.qty-a.qty).forEach(v=>{sh+=`<tr><td>${v.nm}</td><td>${v.no||'-'}</td><td class="num">${v.sku.size}</td><td class="num">${v.qty.toLocaleString()}</td><td class="num">${v.pl.size}</td></tr>`;});document.getElementById('sup-table').innerHTML=sh;}else supCard.style.display='none';
+  renderDetail();
+  const ts=new Date(),pad=x=>String(x).padStart(2,'0');
+  document.getElementById('dl-name').textContent='OPR_KIDS_'+dt+'_'+ts.getFullYear()+pad(ts.getMonth()+1)+pad(ts.getDate())+'_'+pad(ts.getHours())+pad(ts.getMinutes())+'.xlsx';
+}
+function renderDetail(){if(!RESULT)return;const res=RESULT.result.results;const q=(document.getElementById('search-result').value||'').toLowerCase();let rows=res;if(q)rows=res.filter(r=>(r.mat+r.store_name+r.brand+(r.name||'')).toLowerCase().includes(q));const cap=400;document.getElementById('detail-cnt').textContent='('+rows.length.toLocaleString()+'건'+(rows.length>cap?', 상위 '+cap+'건 표시':'')+')';let h='';rows.slice(0,cap).forEach(r=>{const gl=GROUP_LABEL[r.group]||'';h+=`<tr><td><span class="badge b-${r.dist_type==='초도'?'init':(r.dist_type==='픽업'?'pick':(r.dist_type==='PO발주'?'po':'sub'))}">${r.dist_type}</span></td><td>${r.mat}</td><td>${r.brand||''}</td><td><span class="badge b-${r.group}">${gl}</span></td><td>${r.mc||''}</td><td>${r.name||''}</td><td>${r.season||''}</td><td>${r.store_name}</td><td class="num">${r.qty}</td><td class="num">${r.sold_qty||0}</td></tr>`;});document.getElementById('detail-table').innerHTML=h;}
+
+/* ══════════════ 엑셀 출력 (report.py 이식) ══════════════ */
+function safeName(n){return String(n).replace(/[\\\/?*\[\]:]/g,'').slice(0,28)||'기타';}
+function downloadExcel(){
+  if(!RESULT)return;const{dt,distDate,result}=RESULT;const res=result.results,unmet=result.unmet,sizesubs=result.sizesubs||[];const isDn=dt.includes('직납');
+  const wb=XLSX.utils.book_new();const add=(name,aoa)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),safeName(name));
+  if(isDn){
+    let deliv='';try{const d=new Date(distDate+'T00:00:00');d.setDate(d.getDate()+1);deliv=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}catch(e){}
+    const po=[['상품코드','플랜트','수량','납품요청일','브랜드','공급업체','구매처번호','매장','매출수량','현재고','미확정PO']];res.forEach(r=>{const s=supplierOf(r.brand);po.push([r.mat,r.plant,r.qty,deliv,r.brand||'',s?s.name:(r.brand||''),s?s.no:'',r.store_name,r.sold_qty||0,r.cur_stock||0,r.po_qty||0]);});add('PO통합',po);
+    const bs={};res.forEach(r=>{const s=supplierOf(r.brand);const nm=s?s.name:(r.brand||'(미상)');const no=s?s.no:'';(bs[nm+'|'+no]=bs[nm+'|'+no]||{nm,no,rows:[]}).rows.push(r);});
+    Object.values(bs).forEach(v=>{const a=[['공급업체',v.nm,'구매처번호',v.no],[],['상품코드','플랜트','수량','납품요청일']];v.rows.forEach(r=>a.push([r.mat,r.plant,r.qty,deliv]));add(v.nm,a);});
+    const sum=[['공급업체','구매처번호','발주SKU','발주수량','대상매장수']];Object.values(bs).sort((a,b)=>b.rows.reduce((x,r)=>x+r.qty,0)-a.rows.reduce((x,r)=>x+r.qty,0)).forEach(v=>{sum.push([v.nm,v.no,new Set(v.rows.map(r=>r.mat)).size,v.rows.reduce((x,r)=>x+r.qty,0),new Set(v.rows.map(r=>r.plant)).size]);});add('공급업체요약',sum);
+  }else{
+    const sto=[['상품코드','플랜트','수량']];res.forEach(r=>sto.push([r.mat,r.plant,r.qty]));add('분배장(SAP업로드)',sto);
+    const det=[['구분','자재코드','자재명','브랜드','분류','MC','시즌','매장','수량','매출수량','원자재(대체시)']];res.forEach(r=>det.push([r.dist_type,r.mat,r.name||'',r.brand||'',GROUP_LABEL[r.group]||'',r.mc||'',r.season||'',r.store_name,r.qty,r.sold_qty||0,r.orig_mat||'']));add('분배상세',det);
+    if(sizesubs.length){const ss=[['원자재','원자재명','대체자재','대체자재명','매장','수량','사유']];sizesubs.forEach(s=>ss.push([s.orig_mat,s.orig_name,s.sub_mat,s.sub_name,s.store_name,s.qty,s.reason]));add('사이즈대체',ss);}
+  }
+  // 자재별
+  const bm={};res.forEach(r=>{const m=bm[r.mat]=bm[r.mat]||{name:r.name||'',brand:r.brand||'',group:r.group,season:r.season||'',type:r.dist_type,qty:0,stores:new Set()};m.qty+=r.qty;m.stores.add(r.plant);});
+  const matAoa=[['자재코드','자재명','브랜드','분류','구분','시즌','분배수량','매장수']];Object.keys(bm).sort((a,b)=>bm[b].qty-bm[a].qty).forEach(k=>{const m=bm[k];matAoa.push([k,m.name,m.brand,GROUP_LABEL[m.group]||'',m.type,m.season,m.qty,m.stores.size]);});add('자재별내역',matAoa);
+  // 매장별
+  const byp={};res.forEach(r=>{(byp[r.plant]=byp[r.plant]||{sku:new Set(),qty:0});byp[r.plant].sku.add(r.mat);byp[r.plant].qty+=r.qty;});
+  const stAoa=[['플랜트','매장명','분배SKU수','분배수량']];Object.keys(STORES).forEach(p=>{const d=byp[p]||{sku:new Set(),qty:0};stAoa.push([p,STORES[p],d.sku.size,d.qty]);});add('매장별요약',stAoa);
+  // 미배정
+  if(unmet.length){const u=[['자재코드','자재명','매장','매출수량','가용재고','부족분','시즌','사유']];unmet.forEach(x=>u.push([x.mat||'',x.name||'',x.store_name||'',x.sold_qty||0,x.avail_qty||0,x.shortage||x.sold_qty||0,x.season||'',x.reason||'']));add('미배정',u);}
+  XLSX.writeFile(wb,document.getElementById('dl-name').textContent);
+}
+
+/* ══════════════ 매장 관리 ══════════════ */
+function renderStoreMgmt(reset){const meta=reset?defaultMeta():getStoreMeta();let h='';Object.keys(STORES).forEach(p=>{const m=meta[p]||{disp:0,rank:99,mult:1};const isNew=NEW_STORES.has(p),isModel=p===MODEL_STORE;h+=`<tr><td>${p}</td><td>${STORES[p]} ${isModel?'<span class="badge b-init">모델점</span>':''}</td><td><input type="number" id="m-disp-${p}" value="${m.disp||0}" style="width:90px"></td><td><input type="number" id="m-rank-${p}" value="${m.rank||99}" style="width:70px" min="1" max="15"></td><td><input type="number" id="m-mult-${p}" value="${m.mult||1}" step="0.1" style="width:70px"></td><td>${isNew?'<span class="badge b-general">신규점</span>':'<span class="badge" style="background:var(--surface2);color:var(--text3)">기존</span>'}</td></tr>`;});document.getElementById('store-mgmt-table').innerHTML=h;}
+function saveStoreMeta(){const meta={};Object.keys(STORES).forEach(p=>{meta[p]={name:STORES[p],disp:num(document.getElementById('m-disp-'+p).value),rank:parseInt(document.getElementById('m-rank-'+p).value)||99,mult:parseFloat(document.getElementById('m-mult-'+p).value)||1};});setStoreMeta(meta);alert('매장 설정이 저장되었습니다');}
+
+/* ══════════════ 초기화 ══════════════ */
+(function init(){
+  const n=new Date(),p=x=>String(x).padStart(2,'0');document.getElementById('distDate').value=n.getFullYear()+'-'+p(n.getMonth()+1)+'-'+p(n.getDate());
+  buildDistSeg();syncFields();renderStoreChips();renderUploads();
+})();
+</script>
+</body>
+</html>
